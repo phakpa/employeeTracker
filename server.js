@@ -42,9 +42,7 @@ function runEmployee() {
       switch (answer.action) {
         case "View All Employees":
           viewAllEmployees(function (results) {
-            let table = {};
-            table = results;
-            console.table(table);
+            console.table(results);
             runEmployee();
           });
           break;
@@ -84,7 +82,7 @@ function runEmployee() {
 
 function viewAllEmployees(cb) {
   const query =
-    "SELECT a.id, a.first_name, a.last_name, title, name AS department, salary, CONCAT(b.first_name, ' ' , b.last_name) AS manager FROM employee a LEFT JOIN role ON a.id = role.id LEFT JOIN department ON role.department_id = department.id LEFT JOIN employee b ON a.manager_id = b.role_id";
+    "SELECT a.id, a.first_name, a.last_name, title, name AS department, salary, CONCAT(b.first_name, ' ' , b.last_name) AS manager FROM employee a LEFT JOIN role ON a.role_id = role.id LEFT JOIN department ON role.department_id = department.id LEFT JOIN employee b ON a.manager_id = b.id";
   connection.query(query, function (err, results) {
     return cb(results);
   });
@@ -92,56 +90,59 @@ function viewAllEmployees(cb) {
 function addEmployee() {
   viewRoles(function (questions) {
     viewManager(function (manager) {
-      inquirer
-        .prompt([
-          {
-            name: "firstname",
-            type: "input",
-            message: "What is the employees first name?",
-          },
-          {
-            name: "lastname",
-            type: "input",
-            message: "What is the employees last name?",
-          },
-          {
-            name: "role",
-            type: "list",
-            message: "What is the employees role?",
-            choices: questions,
-          },
-          {
-            name: "manager",
-            type: "list",
-            message: "Who is the employees manager?",
-            choices: manager,
-          },
-        ])
+      viewAllEmployees(function (results) {
+        viewAllRoles(function (roles) {
+          viewAllEmployeeData(function (employeeData) {
+            inquirer
+              .prompt([
+                {
+                  name: "firstname",
+                  type: "input",
+                  message: "What is the employees first name?",
+                },
+                {
+                  name: "lastname",
+                  type: "input",
+                  message: "What is the employees last name?",
+                },
+                {
+                  name: "role",
+                  type: "list",
+                  message: "What is the employees role?",
+                  choices: questions,
+                },
+                {
+                  name: "manager",
+                  type: "list",
+                  message: "Who is the employees manager?",
+                  choices: manager,
+                },
+              ])
 
-        .then(function (answer) {
-          console.log(answer.role);
-          console.log(answer.manager);
-
-          // const query =
-          //   "INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?,?,?,?)";
-          // connection.query(
-          //   query,
-          //   answer.firstname,
-          //   answer.lastname,
-          //   answer.role,
-          //   answer.manager,
-          //   function (err, res) {
-          //     return;
-          //   }
-          // );
-          viewAllEmployees(function (results) {
-            let table = {};
-            table = results;
-            console.table(table);
-            runEmployee();
+              .then(function (answer) {
+                let roleID = rolesReturn(answer.role, roles);
+                let managerID = managerReturn(answer.manager, employeeData);
+                console.log(
+                  answer.firstname,
+                  answer.lastname,
+                  roleID,
+                  managerID
+                );
+                addingEmployee(
+                  answer.firstname,
+                  answer.lastname,
+                  roleID,
+                  managerID
+                );
+                viewAllEmployees(function (results) {
+                  console.table(results);
+                  runEmployee();
+                });
+              });
+            return;
           });
         });
-      return;
+      });
     });
   });
 }
@@ -188,11 +189,55 @@ function viewRoles(cb) {
 
 function viewManager(cb) {
   const query = "SELECT first_name, last_name FROM employee";
-  let manager = [];
+  let manager = ["null"];
   connection.query(query, function (err, data) {
     for (i = 0; i < data.length; i++) {
       manager.push(data[i].first_name + " " + data[i].last_name);
     }
     return cb(manager);
+  });
+}
+
+function viewAllRoles(cb) {
+  const query = "SELECT * FROM role";
+  connection.query(query, function (err, data) {
+    return cb(data);
+  });
+}
+
+function rolesReturn(selectedRole, roles) {
+  for (i = 0; i < roles.length; i++) {
+    if (selectedRole === roles[i].title) {
+      return roles[i].id;
+    }
+  }
+}
+
+function managerReturn(selectedManager, Manager) {
+  for (i = 0; i < Manager.length; i++) {
+    if (
+      selectedManager ===
+      Manager[i].first_name + " " + Manager[i].last_name
+    ) {
+      return Manager[i].id;
+    }
+  }
+}
+
+function viewAllEmployeeData(cb) {
+  const query = "SELECT * FROM employee";
+  connection.query(query, function (err, data) {
+    return cb(data);
+  });
+}
+
+function addingEmployee(firstname, lastname, role, manager) {
+  const query =
+    "INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?,?,?,?)";
+  connection.query(query, [firstname, lastname, role, manager], function (
+    err,
+    res
+  ) {
+    return;
   });
 }
