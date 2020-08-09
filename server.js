@@ -30,12 +30,12 @@ function runEmployee() {
       message: "What would you like to do?",
       choices: [
         "View All Employees",
-        "View All Employees by Department",
-        "View All Employees by Manager",
+        "View Employees",
+        "View Departments",
+        "Update Employee Role",
         "Add Employee",
         "Add Role",
         "Add Department",
-        "Remove Employee",
       ],
     })
     .then(function (answer) {
@@ -46,15 +46,6 @@ function runEmployee() {
             runEmployee();
           });
           break;
-
-        // case "View All Employees by Department":
-        //     multiSearch();
-        //   break;
-
-        // case "View All Employees by Manager":
-        //     rangeSearch();
-        //   break;
-
         case "Add Employee":
           addEmployee();
           break;
@@ -64,16 +55,15 @@ function runEmployee() {
         case "Add Department":
           addDepartment();
           break;
-
-        case "Remove Employee":
-          removeEmployee();
+        case "Update Employee Role":
+          updateRole();
           break;
-        // case "Update Employee Role":
-        //     updateRole();
-        //   break;
-        // case "Update Employee Manager":
-        //     updateManager();
-        //   break;
+        case "View Employees":
+          viewEmployees();
+          break;
+        case "View Departments":
+          viewDepartments();
+          break;
         default:
           runEmployee();
       }
@@ -146,34 +136,103 @@ function addEmployee() {
     });
   });
 }
-//use inquirer to get title, salary and department id for role
-function addRole() {
+
+function viewEmployees() {
   const query =
-    'INSERT INTO role (title, salary, department_id) VALUES ("Salesperson", 50000, 3)';
+    "SELECT CONCAT(first_name, ' ' , last_name) AS employees FROM employee";
   connection.query(query, function (err, res) {
-    return;
+    console.table(res);
+    runEmployee();
   });
-  viewAllEmployees();
-  runEmployee();
+  return;
 }
-//use inquirer to get department name
+
+function viewDepartments() {
+  const query = "SELECT CONCAT(name) AS departments FROM department";
+  connection.query(query, function (err, res) {
+    console.table(res);
+    runEmployee();
+  });
+  return;
+}
+
+function viewAllDepartments(cb) {
+  const query = "SELECT * FROM department";
+  connection.query(query, function (err, res) {
+    return cb(res);
+  });
+}
+
+function addRole() {
+  viewAllDepartments(function (data) {
+    let tempDepartment = data;
+    let department = [];
+    for (i = 0; i < tempDepartment.length; i++) {
+      department.push(tempDepartment[i].name);
+    }
+    inquirer
+      .prompt([
+        {
+          name: "title",
+          type: "input",
+          message: "What is the title of the new role?",
+        },
+        {
+          name: "salary",
+          type: "input",
+          message: "What is the salary?",
+        },
+        {
+          name: "departmentID",
+          type: "list",
+          message: "What is the role's department?",
+          choices: department,
+        },
+      ])
+
+      .then(function (answer) {
+        let departmentSelect = [];
+        for (i = 0; i < tempDepartment.length; i++) {
+          if (answer.departmentID === tempDepartment[i].name) {
+            departmentSelect.push(tempDepartment[i].id);
+          }
+        }
+        const query =
+          "INSERT INTO role (title, salary, department_id) VALUES (?,?, ?)";
+        connection.query(
+          query,
+          [answer.title, parseInt(answer.salary), departmentSelect[0]],
+          function (err, res) {
+            return;
+          }
+        );
+        viewAllEmployees(function (results) {
+          console.table(results);
+          runEmployee();
+        });
+      });
+  });
+}
 function addDepartment() {
-  const query = 'INSERT INTO department (name) VALUES ("Salesperson")';
-  connection.query(query, function (err, res) {
-    return;
-  });
-  viewAllEmployees();
-  runEmployee();
-}
+  inquirer
+    .prompt([
+      {
+        name: "name",
+        type: "input",
+        message: "What department would you like to add?",
+      },
+    ])
 
-function removeEmployee() {
-  const query = "DELETE FROM employee WHERE id = 11";
-  connection.query(query, function (err, res) {
-    return;
-  });
-
-  viewAllEmployees();
-  runEmployee();
+    .then(function (answer) {
+      const query = "INSERT INTO department (name) VALUES (?)";
+      connection.query(query, [answer.name], function (err, res) {
+        return;
+      });
+      viewAllEmployees(function (results) {
+        console.table(results);
+        runEmployee();
+      });
+    });
 }
 
 function viewRoles(cb) {
@@ -239,5 +298,62 @@ function addingEmployee(firstname, lastname, role, manager) {
     res
   ) {
     return;
+  });
+}
+
+function updateRole() {
+  viewAllRoles(function (roles) {
+    let tempRoles = [];
+    for (i = 0; i < roles.length; i++) {
+      tempRoles.push(roles[i].title);
+    }
+    viewAllEmployeeData(function (employeeData) {
+      let employees = [];
+      for (i = 0; i < employeeData.length; i++) {
+        employees.push(
+          employeeData[i].first_name + " " + employeeData[i].last_name
+        );
+      }
+      inquirer
+        .prompt([
+          {
+            name: "roleUpdatePerson",
+            type: "list",
+            message: "Which employee role would you like to update?",
+            choices: employees,
+          },
+          {
+            name: "roleUpdate",
+            type: "list",
+            message: "Which role will this employee now have?",
+            choices: tempRoles,
+          },
+        ])
+
+        .then(function (answer) {
+          let roleSelect = roles;
+          let role = [];
+          for (i = 0; i < roleSelect.length; i++) {
+            if (answer.roleUpdate === roleSelect[i].title) {
+              role.push(roleSelect[i].id);
+            }
+          }
+          let newRole = role[0];
+          console.log(newRole);
+
+          const query =
+            "UPDATE employee SET role_id = ? WHERE ? = CONCAT(first_name, ' ' , last_name)";
+          connection.query(query, [newRole, answer.roleUpdatePerson], function (
+            err,
+            res
+          ) {
+            return;
+          });
+          viewAllEmployees(function (results) {
+            console.table(results);
+            runEmployee();
+          });
+        });
+    });
   });
 }
