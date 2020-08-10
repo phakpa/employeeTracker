@@ -31,6 +31,7 @@ function runEmployee() {
       choices: [
         "View All Employees",
         "View Employees",
+        "View Roles",
         "View Departments",
         "Update Employee Role",
         "Add Employee",
@@ -63,6 +64,9 @@ function runEmployee() {
           break;
         case "View Departments":
           viewDepartments();
+          break;
+        case "View Roles":
+          viewRolesGenerator();
           break;
         default:
           runEmployee();
@@ -112,12 +116,6 @@ function addEmployee() {
               .then(function (answer) {
                 let roleID = rolesReturn(answer.role, roles);
                 let managerID = managerReturn(answer.manager, employeeData);
-                console.log(
-                  answer.firstname,
-                  answer.lastname,
-                  roleID,
-                  managerID
-                );
                 addingEmployee(
                   answer.firstname,
                   answer.lastname,
@@ -355,5 +353,16 @@ function updateRole() {
           });
         });
     });
+  });
+}
+
+function viewRolesGenerator() {
+  viewAllRoles(function (data) {
+    let roles = [];
+    for (let i = 0; i < data.length; i++) {
+      roles.push({ roles: data[i].title });
+    }
+    console.table(roles);
+    runEmployee();
   });
 }
