@@ -4,8 +4,8 @@ A command line application is made to store data in a database for employees for
 
 # Links
 
-Demo CLI application. https://drive.google.com/file/d/1iMBhzy8Fz4ZgpCWQAOu4wVYuflQiFP0r/view
-Link to the Github repository. https://github.com/phakpa/employeeTracker
+- Demo for CLI application. https://drive.google.com/file/d/1iMBhzy8Fz4ZgpCWQAOu4wVYuflQiFP0r/view
+- Link for the Github repository. https://github.com/phakpa/employeeTracker
 
 # Images
 
